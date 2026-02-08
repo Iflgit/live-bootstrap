@@ -12,6 +12,7 @@
 
 #define MAX_STRING 4096
 #define MAX_TOKENS 8
+#define MAX_FILES 256
 
 char *get_distfiles(char **envp) {
 	char *envvar = "DISTFILES=";
@@ -20,6 +21,16 @@ char *get_distfiles(char **envp) {
 	// Now we have distfiles= - get just the part we want.
 	require(envp[i] != NULL, "Unable to find distfiles environment variable");
 	return envp[i] + strlen(envvar);
+}
+
+int is_filename_seen(char **seen_filenames, int seen_count, char *filename) {
+	int i;
+	for (i = 0; i < seen_count; i++) {
+		if (strcmp(seen_filenames[i], filename) == 0) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int main(int argc, char **argv, char **envp) {
@@ -33,6 +44,11 @@ int main(int argc, char **argv, char **envp) {
 	require(strcat(output, ".SHA256SUM") != NULL, "Failed concating string");
 	FILE *out = fopen(output, "w+");
 	require(out != NULL, "Failed opening output file");
+
+	// Track seen filenames to avoid duplicates
+	char **seen_filenames = calloc(MAX_FILES, sizeof(char*));
+	require(seen_filenames != NULL, "Failed allocating seen_filenames");
+	int seen_count = 0;
 
 	char *orig_line;
 	char *line = calloc(MAX_STRING, sizeof(char));
@@ -71,13 +87,22 @@ int main(int argc, char **argv, char **envp) {
 			filename = strrchr(tokens[1], '/');
 			filename += 1;
 		}
-		// Put it all together
-		fputs(checksum, out);
-		fputs("  ", out);
-		fputs(get_distfiles(envp), out);
-		fputc('/', out);
-		fputs(filename, out);
-		fputc('\n', out);
+		// Only write if this filename hasn't been seen before
+		if (!is_filename_seen(seen_filenames, seen_count, filename)) {
+			// Add to seen list
+			require(seen_count < MAX_FILES, "Too many files to track");
+			seen_filenames[seen_count] = calloc(strlen(filename) + 1, sizeof(char));
+			require(seen_filenames[seen_count] != NULL, "Failed allocating filename");
+			require(strcpy(seen_filenames[seen_count], filename) != NULL, "Failed copying filename");
+			seen_count += 1;
+			// Write checksum
+			fputs(checksum, out);
+			fputs("  ", out);
+			fputs(get_distfiles(envp), out);
+			fputc('/', out);
+			fputs(filename, out);
+			fputc('\n', out);
+		}
 		// Cleanup
 		i = 0;
 		free(orig_line);
@@ -90,4 +115,10 @@ int main(int argc, char **argv, char **envp) {
 	// Clean up
 	fclose(in);
 	fclose(out);
+	// Free seen filenames
+	int j;
+	for (j = 0; j < seen_count; j++) {
+		free(seen_filenames[j]);
+	}
+	free(seen_filenames);
 }
