@@ -25,6 +25,8 @@ jobs:
           # There is a strange bug(?) in nongnu, when you clone a git repository
           # against a commit != HEAD with depth=1, it errors out.
           fetch-depth: 0
+      - name: Add user to kvm group
+        run: sudo usermod -a -G kvm $USER
       - name: Query cache for sources
         id: cache
         uses: actions/cache/restore@v4
@@ -47,7 +49,7 @@ jobs:
             mirror-state
           key: cache-${{ hashFiles('steps/*/sources') }}
       - name: Run bootstrap
-        run: sudo ./rootfs.py --qemu --update-checksums --external-sources --cores 2 --mirror file://${PWD}/mirror
+        run: ./rootfs.py --qemu --update-checksums --external-sources --cores 2 --mirror file://${PWD}/mirror
       - name: Remount package disk
         if: always()
         run: >
