@@ -25,8 +25,8 @@ jobs:
           # There is a strange bug(?) in nongnu, when you clone a git repository
           # against a commit != HEAD with depth=1, it errors out.
           fetch-depth: 0
-      - name: Add user to kvm group
-        run: sudo usermod -a -G kvm $USER
+      - name: Fix KVM permissions
+        run: sudo chmod 666 /dev/kvm
       - name: Query cache for sources
         id: cache
         uses: actions/cache/restore@v4
