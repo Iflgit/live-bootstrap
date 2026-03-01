@@ -55,6 +55,14 @@ jobs:
           sudo partprobe ${DEV} &&
           mkdir -p mnt &&
           sudo mount ${DEV}p1 mnt
+      - name: Debug - Check mounted disk contents
+        if: always()
+        run: |
+          echo "=== Mounted disk contents ==="
+          ls -lah mnt/ || echo "Failed to list mnt"
+          echo ""
+          echo "=== Looking for packages ==="
+          find mnt/ -name "*.tar.xz" -o -name "*.tar.gz" 2>/dev/null | head -20
       - name: Archive created packages
         if: always() # archive both failed and successful builds
         uses: actions/upload-artifact@v4
